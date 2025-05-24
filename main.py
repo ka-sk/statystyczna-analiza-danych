@@ -3,9 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
 from pathlib import Path
-from collections import Counter
 from pandas.api.types import is_numeric_dtype
-import numpy as np
 import qqplot_funct as qq
 
 # Styl wykresów
@@ -20,33 +18,44 @@ plot_path = Path('plots')
 colors = ['#4F6D7A', '#AE4A4A', '#DE9543']
 col_names = ['sex', 'Experience', 'TEST 0-10 points', 'T task [s]', 'AGE', 'R jacket']
 x_labels = ['Gogle transparentne', 'Gogle czerwone', "Gogle żółte"]
-titles = ['Płeć badanych', "Doświadczenie zawodowe badanych", 'Wyniki testu BHP wśród badanych', 'Czas noszenia gogli przez badanych', "Wiek badanych"]
+titles = ['Płeć badanych', "Doświadczenie zawodowe badanych", 'Wyniki testu BHP wśród badanych', 'Czas noszenia gogli przez badanych', "Wiek badanych", 'Wykres kwantyl-kwantyl']
 
 for file_idx, suf in enumerate(suffixes):
+    # Sprawdzenie czy generować qqplot i boxplot
+    if_qqplot = suf == "TTFF"
+    
     # stworzenie obrazka z histagramem
     hist_fig, hist_ax = plt.subplots(nrows=1, ncols=3, figsize=[8, 5])
+
     # stworzenie obrazka z boxplotami
     box_fig, box_ax = plt.subplots(nrows=1, ncols=3, figsize=[8, 2])
 
+    # stworzenie obrazka qqplot
+    qq_fig, qq_ax = plt.subplots(nrows=1, ncols=3, figsize=[8, 5])
+
+    # Tworzenie subplotów dla każdego koloru gogli w tej kategorii
     for col_idx, pre in enumerate(prefixes):
-    
         # wczytanie danych
         file_name = Path(pre + suf + file_format)
         file_name = Path(data_path) / file_name
         data = pd.read_csv(file_name, header=1)
 
+        #sprawdzenie czy rysowanie i zapis boxplotu się odbędzie
+        if_boxplot = is_numeric_dtype(data[col_names[file_idx]])
+
         # rysowanie histogramu
         hist_ax[col_idx].hist(data[col_names[file_idx]], color=colors[col_idx])
         hist_ax[col_idx].set_xlabel(x_labels[col_idx])
 
-        if suf != "TTFF":
-            # rysowanie boxplotów
+        # rysowanie boxplotów
+        if if_boxplot:
             box_ax[col_idx].boxplot(data[col_names[file_idx]], 
                                     orientation='horizontal', 
                                     patch_artist=True,
                                     boxprops=dict(facecolor=colors[col_idx]),
                                     widths=0.5)
-        else:
+        # rysowanie qqplotów
+        if if_qqplot:
             qq.qqplot(data[col_names[file_idx]], box_ax[col_idx], colors[col_idx])
             box_fig.supxlabel('Dane teoretyczne')
             box_fig.supylabel('Dane doświadczalne')
@@ -57,10 +66,16 @@ for file_idx, suf in enumerate(suffixes):
     hist_fig.savefig(plot_path / f'{suf}_hist.eps')
     hist_fig.savefig(plot_path / f'{suf}_hist.png')
     plt.close(hist_fig)
-  
-    box_fig.savefig(plot_path / f'{suf}_box.eps') if suf is not "TTFF" else box_fig.savefig(plot_path / f'{suf}_qqplot.eps')
-    box_fig.savefig(plot_path / f'{suf}_box.png') if suf is not "TTFF" else box_fig.savefig(plot_path / f'{suf}_qqplot.png')
-    plt.close(box_fig)
+
+    if if_boxplot:
+        box_fig.savefig(plot_path / f'{suf}_box.eps')
+        box_fig.savefig(plot_path / f'{suf}_box.png')
+        plt.close(box_fig)
+
+    if if_qqplot:
+        qq_fig.savefig(plot_path / f'{suf}_qq.eps')
+        qq_fig.savefig(plot_path / f'{suf}_qq.png')
+        plt.close(qq_fig)
     
     pass
 
