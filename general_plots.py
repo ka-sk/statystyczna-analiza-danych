@@ -18,7 +18,7 @@ plot_path = Path('plots')
 colors = ['#4F6D7A', '#AE4A4A', '#DE9543']
 col_names = ['sex', 'Experience', 'TEST 0-10 points', 'T task [s]', 'AGE', 'R jacket']
 x_labels = ['Gogle transparentne', 'Gogle czerwone', "Gogle żółte"]
-titles = ['Płeć badanych', "Doświadczenie zawodowe badanych", 'Wyniki testu BHP wśród badanych', 'Czas noszenia gogli przez badanych', "Wiek badanych", 'Wykres kwantyl-kwantyl']
+titles = ['Płeć badanych', "Doświadczenie zawodowe badanych", 'Wyniki testu BHP wśród badanych', 'Czas noszenia gogli przez badanych', "Wiek badanych", 'Czas do pierwszej fiksacji']
 
 for file_idx, suf in enumerate(suffixes):
     # Sprawdzenie czy generować qqplot i boxplot
@@ -56,9 +56,9 @@ for file_idx, suf in enumerate(suffixes):
                                     widths=0.5)
         # rysowanie qqplotów
         if if_qqplot:
-            qq.qqplot(data[col_names[file_idx]], box_ax[col_idx], colors[col_idx])
-            box_fig.supxlabel('Dane teoretyczne')
-            box_fig.supylabel('Dane doświadczalne')
+            qq.qqplot(data[col_names[file_idx]], qq_ax[col_idx], colors[col_idx])
+            qq_fig.supxlabel('Dane teoretyczne')
+            qq_fig.supylabel('Dane doświadczalne [s]')
             pass
 
     hist_fig.supylabel("Liczba wystąpień")
@@ -103,9 +103,9 @@ for file_idx, suf in enumerate(suffixes):
 # 10. Wpływ wieku
 
 #####################################
-# 11. Rozkład TTFF dla czerwonej kurtki
+#### 11. Rozkład TTFF dla czerwonej kurtki
 
-# 12. QQ-plot (kwantyl-kwantyl)
+#### 12. QQ-plot (kwantyl-kwantyl)
 
 # 13. Testy normalności
 print("Test Shapiro TTFF (czerwona):", stats.shapiro(red_ttff.dropna()))

@@ -31,3 +31,7 @@ def qqplot(data, ax, color='blue'):
         scatter_kws={'color': color, 's': 40},
         line_kws={'color': color}
     )
+
+    # Wyłącz domyślne etykiety osi
+    ax.set_xlabel('')
+    ax.set_ylabel('')
