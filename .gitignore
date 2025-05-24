@@ -4,3 +4,4 @@ eksport_csv/
 plots/
 .venv/
 __pycache__/
+corelation_plots/
