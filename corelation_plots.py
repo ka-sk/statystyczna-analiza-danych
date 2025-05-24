@@ -1,9 +1,10 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy import stats
 from pathlib import Path
 from matplotlib.ticker import MaxNLocator
+import funct as f
+import os
 
 # Styl wykresów
 sns.set(style="whitegrid")
@@ -33,6 +34,8 @@ id_column = 'participant nr'
 
 plot_blacklist = {'SEX': ['O'], 
                   'H&STEST_RESULTS': [7]}
+
+save_data_path = Path('data_to_analysis')
 
 TTFF_df = [0]*3
 # wczytanie TTFF
@@ -82,22 +85,37 @@ for file_idx, category in enumerate(suffixes):
 
     for idx, ax in enumerate(hist_ax):
 
-        # filtracja danych
+        # tworzenie wykresu
         if not if_grouped:
+            #filtracja danych
             plot_data = merged_df[merged_df[col_names[file_idx]] == sb_names[idx]]   
+
+            # wykres
             ax.hist(plot_data['R jacket'], color=colors[idx])
-            ax.set_title(sb_names[idx])
+            temp_name = str(sb_names[idx])
+
         else:
+            # filtracja dla pogrupowanych danych
             plot_data = merged_df[merged_df[col_names[file_idx]].isin(sb_names[idx])]
+
+            # wykres
             ax.hist(plot_data['R jacket'], color=colors[idx])
 
             if category == 'AGE':
-                ax.set_title(f'{sb_names[idx][0]} - {sb_names[idx][-1]} [y]')
+                temp_name = f'{sb_names[idx][0]} - {sb_names[idx][-1]} [y]'
             elif category == 'TIME':
-                ax.set_title(f'{sb_names[idx][0]} - {sb_names[idx][-1]} [s]')
+                temp_name = f'{sb_names[idx][0]} - {sb_names[idx][-1]} [s]'
+            else: 
+                temp_name = f'{sb_names[idx][0]} - {sb_names[idx][-1]}'
 
+        ax.set_title(temp_name)
         # ustal, by oś Y miała tylko liczby całkowite
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+
+        # eksport danych
+        dir_name = category + '_TTFF'
+        os.makedirs(save_data_path / dir_name, exist_ok=True)
+        f.export_data(plot_data,save_data_path / Path(dir_name) / Path(temp_name))
 
     hist_fig.suptitle(subtitels[file_idx])
     hist_fig.supxlabel("Czas do pierwszej fiksacji [s]")
@@ -114,13 +132,13 @@ for file_idx, category in enumerate(suffixes):
 # 6. Testy statystyczne — porównanie czasów między grupami
 
 #####################################
-# 7. Wpływ testu BHP na TTFF
+#### 7. Wpływ testu BHP na TTFF
 
-# 8. Wpływ płci na TTFF
+#### 8. Wpływ płci na TTFF
 
-# 9. Wpływ doświadczenia
+#### 9. Wpływ doświadczenia
 
-# 10. Wpływ wieku
+#### 10. Wpływ wieku
 
 #####################################
 #### 11. Rozkład TTFF dla czerwonej kurtki

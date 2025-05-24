@@ -4,7 +4,8 @@ import seaborn as sns
 from scipy import stats
 from pathlib import Path
 from pandas.api.types import is_numeric_dtype
-import qqplot_funct as qq
+import funct as f
+import os
 
 # Styl wykresów
 sns.set(style="whitegrid")
@@ -18,7 +19,14 @@ plot_path = Path('plots')
 colors = ['#4F6D7A', '#AE4A4A', '#DE9543']
 col_names = ['sex', 'Experience', 'TEST 0-10 points', 'T task [s]', 'AGE', 'R jacket']
 x_labels = ['Gogle transparentne', 'Gogle czerwone', "Gogle żółte"]
-titles = ['Płeć badanych', "Doświadczenie zawodowe badanych", 'Wyniki testu BHP wśród badanych', 'Czas noszenia gogli przez badanych', "Wiek badanych", 'Czas do pierwszej fiksacji']
+titles = ['Płeć badanych', 
+          "Doświadczenie zawodowe badanych", 
+          'Wyniki testu BHP wśród badanych', 
+          'Czas noszenia gogli przez badanych', 
+          "Wiek badanych", 
+          'Czas do pierwszej fiksacji']
+
+save_data_path = Path('data_to_analysis')
 
 for file_idx, suf in enumerate(suffixes):
     # Sprawdzenie czy generować qqplot i boxplot
@@ -56,10 +64,16 @@ for file_idx, suf in enumerate(suffixes):
                                     widths=0.5)
         # rysowanie qqplotów
         if if_qqplot:
-            qq.qqplot(data[col_names[file_idx]], qq_ax[col_idx], colors[col_idx])
+            f.qqplot(data[col_names[file_idx]], qq_ax[col_idx], colors[col_idx])
             qq_fig.supxlabel('Dane teoretyczne')
             qq_fig.supylabel('Dane doświadczalne [s]')
             pass
+        
+        data = data[col_names[file_idx]]
+        # eksport danych
+        dir_name = suf + '_base'
+        os.makedirs(save_data_path / dir_name, exist_ok=True)
+        f.export_data(data, save_data_path / Path(dir_name) / Path(f'{pre}'))
 
     hist_fig.supylabel("Liczba wystąpień")
     hist_fig.suptitle(titles[file_idx])   

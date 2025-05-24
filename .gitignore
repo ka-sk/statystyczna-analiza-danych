@@ -5,3 +5,4 @@ plots/
 .venv/
 __pycache__/
 corelation_plots/
+data_to_analysis/

@@ -35,3 +35,7 @@ def qqplot(data, ax, color='blue'):
     # Wyłącz domyślne etykiety osi
     ax.set_xlabel('')
     ax.set_ylabel('')
+
+def export_data(df: pd.DataFrame, path):
+    df.to_csv(path)
+    pass
