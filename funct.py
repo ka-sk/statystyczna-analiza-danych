@@ -3,7 +3,10 @@ import pandas as pd
 import seaborn as sns
 from scipy import stats
 import matplotlib.pyplot as plt
-from scipy.stats import shapiro, levene, kruskal
+from scipy.stats import shapiro, levene, kruskal, chisquare
+from statsmodels.formula.api import ols
+from statsmodels.stats.anova import anova_lm
+
 
 def qqplot(data, ax, color='blue'):
     """
@@ -113,4 +116,72 @@ def statystyki_opisowe(series, results, name):
     results.append(f"  Max: {max_val:.4f}")
     results.append(f"  Kwartyl 1 (25%): {q1:.4f}")
     results.append(f"  Kwartyl 3 (75%): {q3:.4f}")
+    return results
+
+
+def test_rownolicznosci(data: list, results: list, file_label: str = ""):
+    """
+    Test chi-kwadrat na równoliczność liczby obserwacji w grupach.
+
+    Parametry:
+        data: list of pd.Series - lista serii danych pogrupowanych (np. TTFF dla każdej grupy)
+        results: list - lista, do której będą dopisywane wyniki
+        file_label: str - etykieta pliku/folderu do opisu
+    """
+    results.append(f"Test chi-kwadrat dla równoliczności obserwacji ({file_label}):")
+
+    try:
+        # Zlicz liczbę obserwacji w każdej grupie
+        counts = [len(group) for group in data]
+        num_groups = len(counts)
+
+        # Ostrzeżenie jeśli nie są 3 grupy
+        if num_groups != 3:
+            results.append(f"  UWAGA: Oczekiwano 3 grup, znaleziono {num_groups}.")
+
+        # Oczekiwane liczności
+        expected = [np.mean(counts)] * num_groups
+
+        # Test chi-kwadrat
+        stat, p = chisquare(f_obs=counts, f_exp=expected)
+
+        # Formatowanie słownika z nazwami grup
+        group_counts = {f"Grupa {i+1}": count for i, count in enumerate(counts)}
+        results.append(f"  Liczebności grup: {group_counts}")
+        results.append(f"  Statystyka chi² = {stat:.4f}, p = {p:.4f}")
+
+        # Wniosek
+        if p < 0.05:
+            results.append("  Odrzucamy H₀: liczba obserwacji w grupach nie jest równa.")
+        else:
+            results.append("  Brak podstaw do odrzucenia H₀: liczba obserwacji w grupach może być równa.")
+    except Exception as e:
+        results.append(f"  Błąd podczas testu chi-kwadrat: {e}")
+
+    results.append("-" * 40)
+    return results
+
+
+def anova(data, results, normal, equal_var):
+    if normal and equal_var:
+        # ANOVA jednoczynnikowa
+        try:
+            df_anova = data.copy()
+            df_anova['group'] = df_anova['group'].astype(str)
+            model = ols('TTFF ~ C(group)', data=df_anova).fit()
+            anova_results = anova_lm(model, typ=2)
+            f_val = anova_results['F'].iloc[0]
+            p_val = anova_results['PR(>F)'].iloc[0]
+            results.append("  Wynik ANOVA:")
+            results.append(f"    F = {f_val:.4f}, p = {p_val:.4f}")
+        except Exception as e:
+            results.append(f"  Błąd w obliczaniu ANOVA: {e}")
+    else:
+        # Test Kruskala-Wallisa
+        try:
+            stat_kw, p_kw = kruskal(*data)
+            results.append("  Wynik testu Kruskala-Wallisa:")
+            results.append(f"    statystyka={stat_kw:.4f}, p={p_kw:.4f}")
+        except Exception as e:
+            results.append(f"  Błąd w obliczaniu testu Kruskala-Wallisa: {e}")
     return results

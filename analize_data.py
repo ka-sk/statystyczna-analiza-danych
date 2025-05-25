@@ -10,6 +10,8 @@ def analyze_base_folder(base_folder):
     # Analiza folderu *_base: statystyki opisowe i test Shapiro-Wilka dla plików T_*, R_*, Y_.
     base_folder = Path(base_folder)
     results = []
+
+    all_data = []
     # Przetwarzaj pliki CSV rozpoczynające się od T_, R_ lub Y_
     for file_path in base_folder.glob("*.csv"):
         name = file_path.name
@@ -27,18 +29,47 @@ def analyze_base_folder(base_folder):
             continue
 
         # Weź pierwszą kolumnę jako dane liczbowe, pomiń inne kolumny jeśli występują
-        series = df.iloc[:, 0]
-        series = pd.to_numeric(series, errors='coerce')  # konwersja do numeric, błędy na NaN
-        series = series.dropna()
-        if series.empty:
+        data = df.iloc[:, 0]
+        data = pd.to_numeric(data, errors='coerce')  # konwersja do numeric, błędy na NaN
+        data = data.dropna()
+        if data.empty:
             results.append(f"Plik {name}: brak poprawnych danych liczbowych do analizy.")
             continue
 
         # Oblicz statystyki opisowe
-        results = fun.statystyki_opisowe(series, results, name)
+        results = fun.statystyki_opisowe(data, results, name)
         # Test normalności Shapiro-Wilka
-        results, _ = fun.test_normalnosci(series, results)
+        results, normal = fun.test_normalnosci(data, results)
 
+        if not data.empty:
+            all_data.append(data)
+
+    # Połącz wszystkie dane w jedną ramkę
+    if not all_data:
+        results.append(f"Brak poprawnych danych w folderze {base_folder.name}.")
+        return
+
+    # Sprawdź liczbę grup i wielkości próbek
+    if len(all_data) < 2 or all(len(g) < 2 for g in all_data):
+        results.append("  Brak wystarczających grup lub danych do testów porównawczych.")
+    else:
+        # Test Levene'a na równość wariancji
+        try:
+            stat_lev, p_lev = levene(*all_data)
+            equal_var = (p_lev > 0.05)
+            results.append(f"  Test Levene'a: statystyka={stat_lev:.4f}, p={p_lev:.4f}")
+            results.append(f"  Wariancje równe? {'TAK' if equal_var else 'NIE'}")
+        except Exception as e:
+            results.append(f"  Błąd w teście Levene'a: {e}")
+            equal_var = False
+
+        # test równolicznosci chi kwadrat
+        results = fun.test_rownolicznosci(all_data, results, name)
+
+        # ANOVA lub Kruskal-Wallisa
+        results = fun.anova(all_data, results, normal, equal_var)
+
+    results.append("-" * 40)
     # Zapisz wyniki do pliku results.txt w folderze base
     output_file = base_folder / "results.txt"
     with open(output_file, "w", encoding="utf-8") as f:
@@ -49,6 +80,7 @@ def analyze_ttff_folder(ttff_folder):
     # Analiza folderu *_TTFF: statystyki TTFF, normalność, testy grupowe.
     ttff_folder = Path(ttff_folder)
     results = []
+    all_data = []
     # Przetwarzaj pliki CSV w folderze TTFF
     for file_path in ttff_folder.glob("*.csv"):
         name = file_path.name
@@ -58,10 +90,12 @@ def analyze_ttff_folder(ttff_folder):
         except Exception as e:
             results.append(f"Nie można wczytać pliku {name}: {e}")
             continue
+
         # Sprawdź czy plik jest pusty
         if df.empty:
             results.append(f"Plik {name} jest pusty lub nie zawiera danych.")
             continue
+
         # Sprawdź liczbę kolumn (min. 4 wymagane)
         if df.shape[1] < 4:
             results.append(f"Plik {name}: zbyt mało kolumn (wymagane min. 4).")
@@ -80,52 +114,37 @@ def analyze_ttff_folder(ttff_folder):
         results = fun.statystyki_opisowe(data['TTFF'], results, name)
 
         # Test normalności Shapiro-Wilka
-        results, normal_data = fun.test_normalnosci(data['TTFF'], results)
+        results, normal = fun.test_normalnosci(data['TTFF'], results)
 
-        # Przygotuj listę grup do testów
-        groups = []
-        for grp, subset in data.groupby('group'):
-            vals = subset['TTFF'].dropna()
-            if len(vals) > 0:
-                groups.append(vals.values)
+        if not data.empty:
+            all_data.append(data["TTFF"])
 
-        # Sprawdź liczbę grup i wielkości próbek
-        if len(groups) < 2 or all(len(g) < 2 for g in groups):
-            results.append("  Brak wystarczających grup lub danych do testów porównawczych.")
-        else:
-            # Test Levene'a na równość wariancji
-            try:
-                stat_lev, p_lev = levene(*groups)
-                equal_var = (p_lev > 0.05)
-                results.append(f"  Test Levene'a: statystyka={stat_lev:.4f}, p={p_lev:.4f}")
-                results.append(f"  Wariancje równe? {'TAK' if equal_var else 'NIE'}")
-            except Exception as e:
-                results.append(f"  Błąd w teście Levene'a: {e}")
-                equal_var = False
-            # ANOVA lub Kruskal-Wallisa
-            if normal_data and equal_var:
-                # ANOVA jednoczynnikowa
-                try:
-                    df_anova = data.copy()
-                    df_anova['group'] = df_anova['group'].astype(str)
-                    model = ols('TTFF ~ C(group)', data=df_anova).fit()
-                    anova_results = anova_lm(model, typ=2)
-                    f_val = anova_results['F'].iloc[0]
-                    p_val = anova_results['PR(>F)'].iloc[0]
-                    results.append("  Wynik ANOVA:")
-                    results.append(f"    F = {f_val:.4f}, p = {p_val:.4f}")
-                except Exception as e:
-                    results.append(f"  Błąd w obliczaniu ANOVA: {e}")
-            else:
-                # Test Kruskala-Wallisa
-                try:
-                    stat_kw, p_kw = kruskal(*groups)
-                    results.append("  Wynik testu Kruskala-Wallisa:")
-                    results.append(f"    statystyka={stat_kw:.4f}, p={p_kw:.4f}")
-                except Exception as e:
-                    results.append(f"  Błąd w obliczaniu testu Kruskala-Wallisa: {e}")
+    # Połącz wszystkie dane w jedną ramkę
+    if not all_data:
+        results.append(f"Brak poprawnych danych w folderze {ttff_folder.name}.")
+        return
 
-        results.append("-" * 40)
+    # Sprawdź liczbę grup i wielkości próbek
+    if len(all_data) < 2 or all(len(g) < 2 for g in all_data):
+        results.append("  Brak wystarczających grup lub danych do testów porównawczych.")
+    else:
+        # Test Levene'a na równość wariancji
+        try:
+            stat_lev, p_lev = levene(*all_data)
+            equal_var = (p_lev > 0.05)
+            results.append(f"  Test Levene'a: statystyka={stat_lev:.4f}, p={p_lev:.4f}")
+            results.append(f"  Wariancje równe? {'TAK' if equal_var else 'NIE'}")
+        except Exception as e:
+            results.append(f"  Błąd w teście Levene'a: {e}")
+            equal_var = False
+
+        # test równolicznosci chi kwadrat
+        results = fun.test_rownolicznosci(all_data, results, name)
+
+        # ANOVA lub Kruskal-Wallisa
+        results = fun.anova(data, results, normal, equal_var)
+
+    results.append("-" * 40)
 
     # Zapisz wyniki do pliku results.txt w folderze TTFF
     output_file = ttff_folder / "results.txt"
