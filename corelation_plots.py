@@ -115,7 +115,7 @@ for file_idx, category in enumerate(suffixes):
         # eksport danych
         dir_name = category + '_TTFF'
         os.makedirs(save_data_path / dir_name, exist_ok=True)
-        f.export_data(plot_data,save_data_path / Path(dir_name) / Path(temp_name))
+        f.export_data(plot_data,save_data_path / Path(dir_name) / Path(temp_name + '.csv'))
 
     hist_fig.suptitle(subtitels[file_idx])
     hist_fig.supxlabel("Czas do pierwszej fiksacji [s]")

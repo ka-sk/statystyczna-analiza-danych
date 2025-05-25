@@ -73,7 +73,7 @@ for file_idx, suf in enumerate(suffixes):
         # eksport danych
         dir_name = suf + '_base'
         os.makedirs(save_data_path / dir_name, exist_ok=True)
-        f.export_data(data, save_data_path / Path(dir_name) / Path(f'{pre}'))
+        f.export_data(data, save_data_path / Path(dir_name) / Path(f'{pre}.csv'))
 
     hist_fig.supylabel("Liczba wystąpień")
     hist_fig.suptitle(titles[file_idx])   
