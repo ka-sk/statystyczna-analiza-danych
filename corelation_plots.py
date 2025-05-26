@@ -5,6 +5,8 @@ from pathlib import Path
 from matplotlib.ticker import MaxNLocator
 import funct as f
 import os
+from pandas.api.types import is_numeric_dtype
+
 
 # Styl wykresów
 sns.set(style="whitegrid")
@@ -81,7 +83,8 @@ for file_idx, category in enumerate(suffixes):
         if_grouped=True
 
     # stworzenie subplotów
-    hist_fig, hist_ax = plt.subplots(nrows=1, ncols=len(sb_names))
+    hist_fig, hist_ax = plt.subplots(nrows=1, ncols=len(sb_names), figsize=[8, 5])
+    box_fig, box_ax = plt.subplots(nrows=1, ncols=len(sb_names), figsize=[8, 2])
 
     for idx, ax in enumerate(hist_ax):
 
@@ -107,6 +110,17 @@ for file_idx, category in enumerate(suffixes):
                 temp_name = f'{sb_names[idx][0]} - {sb_names[idx][-1]} [s]'
             else: 
                 temp_name = f'{sb_names[idx][0]} - {sb_names[idx][-1]}'
+        
+        #sprawdzenie czy rysowanie i zapis boxplotu się odbędzie
+        if_boxplot = is_numeric_dtype(plot_data['R jacket'])
+
+        # rysowanie boxplotów
+        if if_boxplot:
+            box_ax[idx].boxplot(plot_data['R jacket'], 
+                                    orientation='horizontal', 
+                                    patch_artist=True,
+                                    boxprops=dict(facecolor=colors[idx]),
+                                    widths=0.5)
 
         ax.set_title(temp_name)
         # ustal, by oś Y miała tylko liczby całkowite
@@ -122,29 +136,10 @@ for file_idx, category in enumerate(suffixes):
     hist_fig.supylabel("Liczba wystapień")
     hist_fig.savefig(plot_path / f'{category}_hist.eps')
     hist_fig.savefig(plot_path / f'{category}_hist.png')
-    #plt.show()
     plt.close(hist_fig)
+
+    box_fig.savefig(plot_path / f'{category}_box.eps')
+    box_fig.savefig(plot_path / f'{category}_box.png')
+    #plt.show()
+    
     pass
-'''
-#####################################
-#### 5. Czas noszenia gogli
-
-# 6. Testy statystyczne — porównanie czasów między grupami
-
-#####################################
-#### 7. Wpływ testu BHP na TTFF
-
-#### 8. Wpływ płci na TTFF
-
-#### 9. Wpływ doświadczenia
-
-#### 10. Wpływ wieku
-
-#####################################
-#### 11. Rozkład TTFF dla czerwonej kurtki
-
-#### 12. QQ-plot (kwantyl-kwantyl)
-
-# 13. Testy normalności
-print("Test Shapiro TTFF (czerwona):", stats.shapiro(red_ttff.dropna()))
-'''

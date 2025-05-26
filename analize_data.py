@@ -35,9 +35,10 @@ def analyze_base_folder(base_folder):
         if data.empty:
             results.append(f"Plik {name}: brak poprawnych danych liczbowych do analizy.")
             continue
-
+        
+        results.append(f"Plik: {name} w folderze {base_folder}")
         # Oblicz statystyki opisowe
-        results = fun.statystyki_opisowe(data, results, name)
+        results = fun.statystyki_opisowe(data, results)
         # Test normalności Shapiro-Wilka
         results, normal = fun.test_normalnosci(data, results)
 
@@ -64,7 +65,7 @@ def analyze_base_folder(base_folder):
             equal_var = False
 
         # test równolicznosci chi kwadrat
-        results = fun.test_rownolicznosci(all_data, results, name)
+        results = fun.test_rownolicznosci(all_data, results)
 
         # ANOVA lub Kruskal-Wallisa
         results = fun.anova(all_data, results, normal, equal_var)
@@ -100,7 +101,8 @@ def analyze_ttff_folder(ttff_folder):
         if df.shape[1] < 4:
             results.append(f"Plik {name}: zbyt mało kolumn (wymagane min. 4).")
             continue
-
+        
+        results.append(f"Plik: {name} w folderze {ttff_folder}")
         # Wybierz kolumnę 2 jako TTFF i kolumnę 3 jako zmienną grupującą
         TTFF = pd.to_numeric(df.iloc[:, 2], errors='coerce')
         group = df.iloc[:, 3]
@@ -111,7 +113,7 @@ def analyze_ttff_folder(ttff_folder):
             continue
 
         # Statystyki opisowe TTFF
-        results = fun.statystyki_opisowe(data['TTFF'], results, name)
+        results = fun.statystyki_opisowe(data['TTFF'], results)
 
         # Test normalności Shapiro-Wilka
         results, normal = fun.test_normalnosci(data['TTFF'], results)
@@ -139,10 +141,10 @@ def analyze_ttff_folder(ttff_folder):
             equal_var = False
 
         # test równolicznosci chi kwadrat
-        results = fun.test_rownolicznosci(all_data, results, name)
+        results = fun.test_rownolicznosci(all_data, results)
 
         # ANOVA lub Kruskal-Wallisa
-        results = fun.anova(data, results, normal, equal_var)
+        results = fun.anova(all_data, results, normal, equal_var)
 
     results.append("-" * 40)
 
@@ -173,3 +175,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

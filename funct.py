@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from scipy.stats import shapiro, levene, kruskal, chisquare
 from statsmodels.formula.api import ols
 from statsmodels.stats.anova import anova_lm
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
+import scikit_posthocs as sp
 
 
 def qqplot(data, ax, color='blue'):
@@ -95,7 +97,7 @@ def test_normalnosci(data, results):
     return results, normal
 
 
-def statystyki_opisowe(series, results, name):
+def statystyki_opisowe(series, results):
     # Konwersja do typu liczbowego
     series = pd.to_numeric(series, errors='coerce').dropna()
 
@@ -108,7 +110,6 @@ def statystyki_opisowe(series, results, name):
     q1 = series.quantile(0.25)
     q3 = series.quantile(0.75)
 
-    results.append(f"Plik: {name}")
     results.append(f"  Średnia: {mean_val:.4f}")
     results.append(f"  Odchylenie standardowe: {std_val:.4f}")
     results.append(f"  Mediana: {median_val:.4f}")
@@ -119,7 +120,7 @@ def statystyki_opisowe(series, results, name):
     return results
 
 
-def test_rownolicznosci(data: list, results: list, file_label: str = ""):
+def test_rownolicznosci(data: list, results: list):
     """
     Test chi-kwadrat na równoliczność liczby obserwacji w grupach.
 
@@ -128,7 +129,7 @@ def test_rownolicznosci(data: list, results: list, file_label: str = ""):
         results: list - lista, do której będą dopisywane wyniki
         file_label: str - etykieta pliku/folderu do opisu
     """
-    results.append(f"Test chi-kwadrat dla równoliczności obserwacji ({file_label}):")
+    results.append(f"Test chi-kwadrat dla równoliczności obserwacji:")
 
     try:
         # Zlicz liczbę obserwacji w każdej grupie
@@ -174,6 +175,13 @@ def anova(data, results, normal, equal_var):
             p_val = anova_results['PR(>F)'].iloc[0]
             results.append("  Wynik ANOVA:")
             results.append(f"    F = {f_val:.4f}, p = {p_val:.4f}")
+
+            # Test post hoc Tukeya
+            tukey = pairwise_tukeyhsd(endog=df_anova['TTFF'],
+                                      groups=df_anova['group'],
+                                      alpha=0.05)
+            results.append("  Test post hoc Tukeya:")
+            results.append(str(tukey.summary()))
         except Exception as e:
             results.append(f"  Błąd w obliczaniu ANOVA: {e}")
     else:
@@ -182,6 +190,11 @@ def anova(data, results, normal, equal_var):
             stat_kw, p_kw = kruskal(*data)
             results.append("  Wynik testu Kruskala-Wallisa:")
             results.append(f"    statystyka={stat_kw:.4f}, p={p_kw:.4f}")
+
+            # Test post hoc Dunna
+            dunn = sp.posthoc_dunn(data, val_col='TTFF', group_col='group', p_adjust='bonferroni')
+            results.append("  Test post hoc Dunna (korekty Bonferroniego):")
+            results.append(dunn.to_string())
         except Exception as e:
             results.append(f"  Błąd w obliczaniu testu Kruskala-Wallisa: {e}")
     return results
